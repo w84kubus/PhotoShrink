@@ -8,6 +8,8 @@
   Przeciągasz zdjęcia, wyciągasz gotowe do maila — oryginały bez zmian.
   <br />
   <a href="README.md">🇬🇧 Read in English</a> · 🇵🇱 <strong>Polski</strong>
+  <br />
+  <a href="https://github.com/w84kubus/PhotoShrink/releases/tag/v0.1.0"><strong>⬇️ Pobierz PhotoShrink.exe</strong></a>
 </p>
 
 <p align="center">

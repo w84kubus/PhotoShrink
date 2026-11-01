@@ -8,6 +8,8 @@
   Drag in your photos, drag out an email-ready copy — originals untouched.
   <br />
   🇬🇧 <strong>English</strong> · <a href="README.pl.md">🇵🇱 Czytaj po polsku</a>
+  <br />
+  <a href="https://github.com/w84kubus/PhotoShrink/releases/tag/v0.1.0"><strong>⬇️ Download PhotoShrink.exe</strong></a>
 </p>
 
 <p align="center">
