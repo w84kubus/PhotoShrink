@@ -55,6 +55,40 @@ public sealed class ImageProcessorTests : IDisposable
         return path;
     }
 
+    /// <summary>
+    /// Tworzy testowy PNG z płynnym gradientem + niewielkim szumem — dużo bardziej reprezentatywny
+    /// dla prawdziwego zdjęcia (skompresowalny przez JPEG) niż czysty losowy szum z <see cref="CreateTestImage"/>,
+    /// który jest praktycznie nieskompresowalny i zniekształcałby testy limitu wagi pliku.
+    /// </summary>
+    private static string CreateCompressibleTestImage(string path, int width, int height)
+    {
+        using var bitmap = new SKBitmap(new SKImageInfo(width, height, SKColorType.Rgba8888));
+        var rnd = new Random(12345);
+
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                var baseR = x * 255 / width;
+                var baseG = y * 255 / height;
+                var baseB = (x + y) * 255 / (width + height);
+                var noise = rnd.Next(-20, 21);
+
+                bitmap.SetPixel(x, y, new SKColor(
+                    (byte)Math.Clamp(baseR + noise, 0, 255),
+                    (byte)Math.Clamp(baseG + noise, 0, 255),
+                    (byte)Math.Clamp(baseB + noise, 0, 255)));
+            }
+        }
+
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        using var stream = File.Create(path);
+        data.SaveTo(stream);
+
+        return path;
+    }
+
     private static (int Width, int Height) GetImageSize(string path)
     {
         using var bitmap = SKBitmap.Decode(path);
@@ -99,7 +133,7 @@ public sealed class ImageProcessorTests : IDisposable
     {
         var source = CreateTestImage(Path.Combine(_tempDir, "big.png"), 4000, 3000);
         var destFolder = Path.Combine(_tempDir, "out");
-        var options = new ProcessOptions { MaxDimension = 1920, JpegQuality = 80 };
+        var options = new ProcessOptions { MaxDimension = 1920, MaxFileSizeBytes = 2_000_000 };
 
         var result = await ImageProcessor.ProcessImageAsync(source, destFolder, options);
 
@@ -121,7 +155,7 @@ public sealed class ImageProcessorTests : IDisposable
     {
         var source = CreateTestImage(Path.Combine(_tempDir, "small.png"), 400, 300);
         var destFolder = Path.Combine(_tempDir, "out");
-        var options = new ProcessOptions { MaxDimension = 1920, JpegQuality = 80 };
+        var options = new ProcessOptions { MaxDimension = 1920, MaxFileSizeBytes = 2_000_000 };
 
         await ImageProcessor.ProcessImageAsync(source, destFolder, options);
 
@@ -137,27 +171,43 @@ public sealed class ImageProcessorTests : IDisposable
         var originalBytesBefore = await File.ReadAllBytesAsync(source);
 
         await ImageProcessor.ProcessImageAsync(source, Path.Combine(_tempDir, "out"),
-            new ProcessOptions { MaxDimension = 800, JpegQuality = 50 });
+            new ProcessOptions { MaxDimension = 800, MaxFileSizeBytes = 300_000 });
 
         var originalBytesAfter = await File.ReadAllBytesAsync(source);
         Assert.Equal(originalBytesBefore, originalBytesAfter);
     }
 
     [Fact]
-    public async Task ProcessImageAsync_LowerQuality_ProducesSmallerOrEqualFile()
+    public async Task ProcessImageAsync_RespectsMaxFileSize_WhenLimitIsTight()
+    {
+        var source = CreateCompressibleTestImage(Path.Combine(_tempDir, "sizelimit.png"), 2000, 1500);
+        const long limit = 150_000; // 150 KB — mało, powinno wymusić niższą jakość
+
+        var result = await ImageProcessor.ProcessImageAsync(
+            source, Path.Combine(_tempDir, "out"),
+            new ProcessOptions { MaxDimension = 1920, MaxFileSizeBytes = limit });
+
+        Assert.Equal(ProcessStatus.Processed, result.Status);
+        // Szukanie binarne jest przybliżone (krok co 1 w jakości) — dajemy mały margines.
+        Assert.True(result.OutputBytes <= limit * 1.05,
+            $"Oczekiwano pliku <= {limit} B (z marginesem), otrzymano {result.OutputBytes} B.");
+    }
+
+    [Fact]
+    public async Task ProcessImageAsync_TighterLimit_ProducesSmallerOrEqualFile_ThanLooserLimit()
     {
         var source = CreateTestImage(Path.Combine(_tempDir, "quality.png"), 1200, 900);
 
-        var highQ = await ImageProcessor.ProcessImageAsync(
-            source, Path.Combine(_tempDir, "out_high"),
-            new ProcessOptions { MaxDimension = 1920, JpegQuality = 95 });
+        var loose = await ImageProcessor.ProcessImageAsync(
+            source, Path.Combine(_tempDir, "out_loose"),
+            new ProcessOptions { MaxDimension = 1920, MaxFileSizeBytes = 5_000_000 });
 
-        var lowQ = await ImageProcessor.ProcessImageAsync(
-            source, Path.Combine(_tempDir, "out_low"),
-            new ProcessOptions { MaxDimension = 1920, JpegQuality = 30 });
+        var tight = await ImageProcessor.ProcessImageAsync(
+            source, Path.Combine(_tempDir, "out_tight"),
+            new ProcessOptions { MaxDimension = 1920, MaxFileSizeBytes = 80_000 });
 
-        Assert.True(lowQ.OutputBytes <= highQ.OutputBytes,
-            $"Oczekiwano, że jakość 30 ({lowQ.OutputBytes} B) da plik mniejszy lub równy jakości 95 ({highQ.OutputBytes} B).");
+        Assert.True(tight.OutputBytes <= loose.OutputBytes,
+            $"Oczekiwano, że ciaśniejszy limit ({tight.OutputBytes} B) da plik mniejszy lub równy niż luźny limit ({loose.OutputBytes} B).");
     }
 
     [Fact]
@@ -176,6 +226,32 @@ public sealed class ImageProcessorTests : IDisposable
         Assert.Equal(3, results.Count);
         Assert.All(results, r => Assert.Equal(ProcessStatus.Processed, r.Status));
         Assert.True(Directory.Exists(Path.Combine(_tempDir, "do_wyslania_mailem")));
+    }
+
+    [Fact]
+    public void TryCreateThumbnail_ReturnsSmallJpeg_ForValidImage()
+    {
+        var source = CreateTestImage(Path.Combine(_tempDir, "thumb_source.png"), 3000, 2000);
+
+        var bytes = ImageProcessor.TryCreateThumbnail(source, maxSize: 96);
+
+        Assert.NotNull(bytes);
+        using var ms = new MemoryStream(bytes!);
+        using var thumb = SKBitmap.Decode(ms);
+        Assert.True(thumb.Width <= 96 && thumb.Height <= 96);
+        // 3000x2000 -> stosunek 3:2 powinien zostać zachowany
+        Assert.InRange((double)thumb.Width / thumb.Height, 1.5 - 0.05, 1.5 + 0.05);
+    }
+
+    [Fact]
+    public void TryCreateThumbnail_ReturnsNull_ForUnreadableFile()
+    {
+        var badFile = Path.Combine(_tempDir, "not_an_image.jpg");
+        File.WriteAllText(badFile, "to nie jest obraz");
+
+        var bytes = ImageProcessor.TryCreateThumbnail(badFile);
+
+        Assert.Null(bytes);
     }
 
     [Fact]

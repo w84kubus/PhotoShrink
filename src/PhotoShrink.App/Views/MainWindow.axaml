@@ -1,13 +1,16 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:PhotoShrink.App.ViewModels"
+        xmlns:models="using:PhotoShrink.App.Models"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="560" d:DesignHeight="560"
+        mc:Ignorable="d" d:DesignWidth="680" d:DesignHeight="720"
         x:Class="PhotoShrink.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
-        Width="560" Height="580" MinWidth="480" MinHeight="520"
-        Icon="/Assets/avalonia-logo.ico"
+        Width="680" Height="720" MinWidth="560" MinHeight="560"
+        Icon="/Assets/app.ico"
+        DragDrop.AllowDrop="True"
+        FontSize="15"
         Title="PhotoShrink — pomniejszanie zdjęć do maila">
 
     <Design.DataContext>
@@ -15,53 +18,142 @@
         <vm:MainViewModel />
     </Design.DataContext>
 
-    <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*">
+    <Window.Styles>
+        <Style Selector="Border.dropzone">
+            <Setter Property="BorderBrush" Value="#55FFFFFF"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.dropzone.active">
+            <Setter Property="BorderBrush" Value="#4A9EFF"/>
+            <Setter Property="Background" Value="#1A4A9EFF"/>
+            <Setter Property="RenderTransform" Value="scale(1.015)"/>
+        </Style>
+        <Style Selector="Border.dropzone.pulse">
+            <Setter Property="BorderBrush" Value="#4CD964"/>
+            <Setter Property="Background" Value="#1A4CD964"/>
+            <Setter Property="RenderTransform" Value="scale(1.03)"/>
+        </Style>
+        <Style Selector="Border.summary">
+            <Setter Property="Background" Value="#1A4CD964"/>
+            <Setter Property="BorderBrush" Value="#4CD964"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="14,10"/>
+        </Style>
+    </Window.Styles>
 
-        <TextBlock Grid.Row="0" Text="Folder ze zdjęciami" FontWeight="Bold" Margin="0,0,0,6"/>
+    <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto" RowSpacing="14">
 
-        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
-            <TextBox Grid.Column="0" Text="{Binding SourceFolder}" IsReadOnly="True"
-                     PlaceholderText="Nie wybrano folderu..." Margin="0,0,8,0"/>
-            <Button Grid.Column="1" Content="Wybierz..." Click="OnPickFolderClick" IsEnabled="{Binding !IsBusy}"/>
+        <!-- Strefa przeciągnij-i-upuść -->
+        <Border x:Name="DropZoneBorder" Grid.Row="0" Classes="dropzone" Classes.active="{Binding IsDragOver}"
+                Padding="24" MinHeight="130">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                <TextBlock Text="🖼" FontSize="34" HorizontalAlignment="Center"/>
+                <TextBlock Text="Przeciągnij tutaj zdjęcia albo cały folder"
+                           FontSize="18" FontWeight="SemiBold"
+                           TextAlignment="Center" TextWrapping="Wrap"/>
+                <TextBlock Text="albo" FontSize="13" Opacity="0.6" HorizontalAlignment="Center"/>
+                <Button Content="Wybierz folder ze zdjęciami…" Click="OnPickFolderClick"
+                        HorizontalAlignment="Center" Padding="16,8"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Status + wyczyść -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="{Binding StatusText}" VerticalAlignment="Center"
+                       TextWrapping="Wrap" FontSize="15"/>
+            <Button Grid.Column="1" Content="Wyczyść listę" Command="{Binding ClearPhotosCommand}"
+                    IsVisible="{Binding HasPhotos}" Margin="8,0,0,0"/>
         </Grid>
 
-        <Grid Grid.Row="2" ColumnDefinitions="*,*" Margin="0,0,0,16">
-            <StackPanel Grid.Column="0" Margin="0,0,16,0">
-                <TextBlock Text="Maks. wymiar (px)" Margin="0,0,0,6"/>
-                <NumericUpDown Value="{Binding MaxDimension}" Minimum="100" Maximum="10000"
-                               Increment="10" FormatString="0" IsEnabled="{Binding !IsBusy}"/>
-            </StackPanel>
-            <StackPanel Grid.Column="1">
-                <TextBlock Text="Podfolder wyjściowy" Margin="0,0,0,6"/>
-                <TextBox Text="{Binding OutputFolderName}" IsEnabled="{Binding !IsBusy}"/>
-            </StackPanel>
-        </Grid>
+        <!-- Podsumowanie oszczędności po przetworzeniu -->
+        <Border Grid.Row="2" Classes="summary" IsVisible="{Binding HasSummary}">
+            <TextBlock Text="{Binding SummaryText}" FontSize="16" FontWeight="SemiBold"
+                       TextWrapping="Wrap" HorizontalAlignment="Center"/>
+        </Border>
 
-        <StackPanel Grid.Row="3" Margin="0,0,0,16">
-            <TextBlock Text="{Binding JpegQuality, StringFormat='Jakość JPEG: {0}'}" Margin="0,0,0,6"/>
-            <Slider Minimum="1" Maximum="100" Value="{Binding JpegQuality}" IsEnabled="{Binding !IsBusy}"/>
-        </StackPanel>
+        <ProgressBar Grid.Row="3" Minimum="0" Maximum="100" Value="{Binding ProgressPercent}"
+                     Height="6" IsVisible="{Binding IsBusy}"/>
 
-        <Button Grid.Row="4" Content="Pomniejsz zdjęcia" Command="{Binding StartCommand}"
-                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                Padding="0,10" Margin="0,0,0,16"/>
-
-        <ProgressBar Grid.Row="5" Minimum="0" Maximum="100" Value="{Binding ProgressPercent}"
-                     Height="8" Margin="0,0,0,10"/>
-
-        <TextBlock Grid.Row="6" Text="{Binding StatusText}" Margin="0,0,0,10" TextWrapping="Wrap"/>
-
-        <Border Grid.Row="7" BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="4">
+        <!-- Lista zdjęć -->
+        <Border Grid.Row="4" BorderBrush="#33FFFFFF" BorderThickness="1" CornerRadius="10"
+                Padding="6" IsVisible="{Binding HasPhotos}">
             <ScrollViewer>
-                <ItemsControl ItemsSource="{Binding LogLines}">
+                <ItemsControl ItemsSource="{Binding Photos}">
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding}" FontFamily="Consolas,Menlo,monospace" FontSize="12"/>
+                        <DataTemplate x:DataType="models:PhotoItem">
+                            <Grid ColumnDefinitions="46,*,Auto,Auto" Margin="4,6"
+                                  PointerPressed="OnPhotoRowPointerPressed" Cursor="Hand"
+                                  ToolTip.Tip="Przeciągnij, żeby załączyć do maila">
+                                <Border Grid.Column="0" Width="40" Height="40" CornerRadius="6"
+                                        ClipToBounds="True" Background="#22FFFFFF">
+                                    <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding FileName}" FontSize="15" FontWeight="Medium"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding StatusText}" FontSize="12" Opacity="0.6"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6"
+                                            VerticalAlignment="Center" Margin="0,0,10,0">
+                                    <TextBlock Text="{Binding OriginalSizeText}" Opacity="0.8"/>
+                                    <TextBlock Text="→" Opacity="0.4"/>
+                                    <TextBlock Text="{Binding OutputSizeText}" Foreground="#4A9EFF"/>
+                                    <TextBlock Text="{Binding SavedText}" Foreground="#4CD964" FontSize="12"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Button Grid.Column="3" Content="✕" Command="{Binding RemoveCommand}"
+                                        Padding="8,2" FontSize="12" VerticalAlignment="Center"/>
+                            </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
         </Border>
+
+        <!-- Ustawienia (schowane, żeby nie przytłaczać) -->
+        <Expander Grid.Row="5" Header="Ustawienia" IsExpanded="False">
+            <StackPanel Margin="0,10,0,0" Spacing="14">
+                <Grid ColumnDefinitions="*,*">
+                    <StackPanel Grid.Column="0" Margin="0,0,16,0" Spacing="4">
+                        <TextBlock Text="Maks. wymiar zdjęcia (px)"/>
+                        <NumericUpDown Value="{Binding MaxDimension}" Minimum="100" Maximum="10000"
+                                       Increment="10" FormatString="0" IsEnabled="{Binding !IsBusy}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Text="Maks. rozmiar pliku (MB)"/>
+                        <NumericUpDown Value="{Binding MaxFileSizeMb}" Minimum="0.1" Maximum="20"
+                                       Increment="0.1" FormatString="0.0" IsEnabled="{Binding !IsBusy}"/>
+                    </StackPanel>
+                </Grid>
+                <StackPanel Spacing="4" IsVisible="{Binding ShowExplorerIntegrationOption}">
+                    <TextBlock Text="Menu prawego przycisku myszy w Eksploratorze"/>
+                    <Button Content="{Binding ExplorerIntegrationButtonText}"
+                            Command="{Binding ToggleExplorerIntegrationCommand}"
+                            HorizontalAlignment="Left"/>
+                </StackPanel>
+            </StackPanel>
+        </Expander>
+
+        <!-- Główne akcje -->
+        <Grid Grid.Row="6" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <Button Grid.Column="0" Content="Pomniejsz zdjęcia" Command="{Binding StartCommand}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Padding="0,12" FontSize="16"/>
+            <Button Grid.Column="1" Content="Otwórz folder z wynikiem" Command="{Binding OpenOutputFolderCommand}"
+                    Padding="12,12"/>
+        </Grid>
 
     </Grid>
 </Window>

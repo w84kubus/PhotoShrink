@@ -2,6 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <AssemblyName>PhotoShrink</AssemblyName>
     <RootNamespace>PhotoShrink.App</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>

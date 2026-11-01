@@ -7,11 +7,11 @@ namespace PhotoShrink.Core;
 /// Czysta logika, bez zależności od GUI — łatwa do testowania jednostkowego.
 /// Oryginalne pliki są tylko odczytywane, nigdy nie są nadpisywane ani usuwane.
 /// </summary>
-public static class ImageProcessor
+public static partial class ImageProcessor
 {
     private static readonly string[] SupportedExtensions =
     {
-        ".jpg", ".jpeg", ".png", ".bmp", ".webp", ".gif",
+        ".jpg", ".jpeg", ".png", ".bmp", ".webp", ".gif", ".heic", ".heif",
     };
 
     public static bool IsSupportedImage(string path) =>
@@ -66,6 +66,12 @@ public static class ImageProcessor
             var outputBytes = new FileInfo(destPath).Length;
             return new ProcessResult(fileName, ProcessStatus.Processed, originalBytes, outputBytes);
         }
+        catch (UnauthorizedAccessException)
+        {
+            return new ProcessResult(fileName, ProcessStatus.Failed, 0, 0,
+                "brak uprawnień do zapisu w tym miejscu (np. płyta CD/pendrive tylko do odczytu) " +
+                "— skopiuj zdjęcia na dysk (np. na Pulpit) i spróbuj ponownie");
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return new ProcessResult(fileName, ProcessStatus.Failed, 0, 0, ex.Message);
@@ -74,9 +80,29 @@ public static class ImageProcessor
 
     private static void ResizeAndEncode(string sourcePath, string destPath, ProcessOptions options)
     {
-        using var original = SKBitmap.Decode(sourcePath)
-            ?? throw new InvalidDataException("Nieobsługiwany lub uszkodzony plik obrazu.");
+        var original = SKBitmap.Decode(sourcePath);
+        if (original is not null)
+        {
+            using (original)
+            {
+                ResizeAndEncodeViaSkia(original, destPath, options);
+            }
 
+            return;
+        }
+
+        // SkiaSharp nie zna tego formatu (typowo: HEIC/HEIF ze zdjęć z iPhone'a) — na Windows
+        // spróbuj jeszcze przez wbudowane w system kodeki (GDI+/WIC), zanim się poddamy.
+        if (OperatingSystem.IsWindows() && TryResizeAndEncodeViaWindowsImaging(sourcePath, destPath, options))
+        {
+            return;
+        }
+
+        throw new InvalidDataException("Nieobsługiwany lub uszkodzony plik obrazu.");
+    }
+
+    private static void ResizeAndEncodeViaSkia(SKBitmap original, string destPath, ProcessOptions options)
+    {
         var width = original.Width;
         var height = original.Height;
         var longestSide = Math.Max(width, height);
@@ -98,9 +124,109 @@ public static class ImageProcessor
             }
 
             using var image = SKImage.FromBitmap(toEncode);
-            using var data = image.Encode(SKEncodedImageFormat.Jpeg, Math.Clamp(options.JpegQuality, 1, 100));
-            using var outStream = File.Create(destPath);
-            data.SaveTo(outStream);
+            var bytes = EncodeToFitSize(image, options.MaxFileSizeBytes);
+            File.WriteAllBytes(destPath, bytes);
+        }
+        finally
+        {
+            resized?.Dispose();
+        }
+    }
+
+    private const int MinAutoQuality = 20;
+    private const int MaxAutoQuality = 95;
+
+    /// <summary>
+    /// Koduje obraz jako JPEG, dobierając automatycznie najwyższą jakość, która mieści się
+    /// w <paramref name="maxBytes"/> (szukanie binarne — kilka prób zamiast sprawdzania
+    /// każdej wartości jakości po kolei). Jeśli nawet najniższa dopuszczalna jakość
+    /// (<see cref="MinAutoQuality"/>) nie wystarczy, zwraca mimo to wynik z tą jakością
+    /// zamiast zgłaszać błąd — "jak najlepiej się da" jest lepsze niż brak pliku.
+    /// </summary>
+    private static byte[] EncodeToFitSize(SKImage image, long maxBytes)
+    {
+        var atMaxQuality = EncodeJpeg(image, MaxAutoQuality);
+        if (atMaxQuality.Length <= maxBytes)
+        {
+            // Mieści się nawet przy najlepszej jakości — nie ma sensu pogarszać bardziej niż trzeba.
+            return atMaxQuality;
+        }
+
+        int lo = MinAutoQuality, hi = MaxAutoQuality - 1;
+        byte[]? bestFit = null;
+
+        while (lo <= hi)
+        {
+            var mid = (lo + hi) / 2;
+            var attempt = EncodeJpeg(image, mid);
+
+            if (attempt.Length <= maxBytes)
+            {
+                bestFit = attempt;
+                lo = mid + 1; // spróbuj jeszcze lepszej jakości, skoro ta się zmieściła
+            }
+            else
+            {
+                hi = mid - 1;
+            }
+        }
+
+        return bestFit ?? EncodeJpeg(image, MinAutoQuality);
+    }
+
+    private static byte[] EncodeJpeg(SKImage image, int quality)
+    {
+        using var data = image.Encode(SKEncodedImageFormat.Jpeg, quality);
+        return data.ToArray();
+    }
+
+    /// <summary>
+    /// Tworzy małą miniaturę (JPEG, dłuższy bok maks. <paramref name="maxSize"/> px) do podglądu
+    /// w GUI. Zwraca <c>null</c>, jeśli pliku nie da się odczytać jako obraz — wołający powinien
+    /// wtedy po prostu pokazać ikonę zastępczą zamiast miniatury.
+    /// </summary>
+    public static byte[]? TryCreateThumbnail(string path, int maxSize = 96)
+    {
+        var viaSkia = TryCreateThumbnailViaSkia(path, maxSize);
+        if (viaSkia is not null)
+        {
+            return viaSkia;
+        }
+
+        return OperatingSystem.IsWindows() ? TryCreateThumbnailViaWindowsImaging(path, maxSize) : null;
+    }
+
+    private static byte[]? TryCreateThumbnailViaSkia(string path, int maxSize)
+    {
+        try
+        {
+            using var original = SKBitmap.Decode(path);
+            return original is null ? null : CreateThumbnailBytes(original, maxSize);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static byte[] CreateThumbnailBytes(SKBitmap original, int maxSize)
+    {
+        var longestSide = Math.Max(original.Width, original.Height);
+        var scale = Math.Min(1.0, (double)maxSize / longestSide);
+        var width = Math.Max(1, (int)Math.Round(original.Width * scale));
+        var height = Math.Max(1, (int)Math.Round(original.Height * scale));
+
+        SKBitmap? resized = null;
+        try
+        {
+            resized = original.Resize(
+                new SKImageInfo(width, height, original.ColorType, original.AlphaType),
+                SKSamplingOptions.Default);
+            var toEncode = resized ?? original;
+
+            using var image = SKImage.FromBitmap(toEncode);
+            using var data = image.Encode(SKEncodedImageFormat.Jpeg, 70);
+            return data.ToArray();
         }
         finally
         {

@@ -14,3 +14,7 @@ dist/
 
 # dotnet-install.sh artifacts (if ever re-run inside this folder)
 dotnet-install.sh
+
+# Ad-hoc ISO/zip images used to transfer the built .exe into a test VM or elsewhere
+*.iso
+*.zip
