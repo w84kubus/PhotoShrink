@@ -211,6 +211,30 @@ public sealed class ImageProcessorTests : IDisposable
     }
 
     [Fact]
+    public async Task ProcessImageAsync_NeverGrowsAnAlreadySmallJpeg()
+    {
+        // Już mocno skompresowany mały JPEG (niska jakość, szumiasta treść) — rekompresja przy
+        // hojnym limicie wagi (czyli przy bardzo wysokiej jakości) wyszłaby WIĘKSZA niż
+        // oryginał. Oczekujemy, że ImageProcessor to wykryje i po prostu skopiuje oryginał,
+        // zamiast "pogarszać" plik rosnącym rozmiarem.
+        var pngSource = CreateTestImage(Path.Combine(_tempDir, "small_source.png"), 300, 200);
+        using var bitmap = SKBitmap.Decode(pngSource);
+        using var image = SKImage.FromBitmap(bitmap);
+        using var lowQualityData = image.Encode(SKEncodedImageFormat.Jpeg, 15);
+        var jpegPath = Path.Combine(_tempDir, "already_small.jpg");
+        await File.WriteAllBytesAsync(jpegPath, lowQualityData.ToArray());
+        var originalSize = new FileInfo(jpegPath).Length;
+
+        var result = await ImageProcessor.ProcessImageAsync(
+            jpegPath, Path.Combine(_tempDir, "out"),
+            new ProcessOptions { MaxDimension = 1920, MaxFileSizeBytes = 5_000_000 });
+
+        Assert.Equal(ProcessStatus.Processed, result.Status);
+        Assert.True(result.OutputBytes <= originalSize,
+            $"Wynik ({result.OutputBytes} B) nie powinien być większy niż oryginał ({originalSize} B).");
+    }
+
+    [Fact]
     public async Task ProcessFolderAsync_ProcessesAllImages_AndReportsProgress()
     {
         CreateTestImage(Path.Combine(_tempDir, "p1.png"), 1000, 1000);

@@ -85,7 +85,7 @@ public static partial class ImageProcessor
         {
             using (original)
             {
-                ResizeAndEncodeViaSkia(original, destPath, options);
+                ResizeAndEncodeViaSkia(original, sourcePath, destPath, options);
             }
 
             return;
@@ -101,18 +101,19 @@ public static partial class ImageProcessor
         throw new InvalidDataException("Nieobsługiwany lub uszkodzony plik obrazu.");
     }
 
-    private static void ResizeAndEncodeViaSkia(SKBitmap original, string destPath, ProcessOptions options)
+    private static void ResizeAndEncodeViaSkia(SKBitmap original, string sourcePath, string destPath, ProcessOptions options)
     {
         var width = original.Width;
         var height = original.Height;
         var longestSide = Math.Max(width, height);
+        var willResize = longestSide > options.MaxDimension && options.MaxDimension > 0;
 
         SKBitmap? resized = null;
         try
         {
             SKBitmap toEncode = original;
 
-            if (longestSide > options.MaxDimension && options.MaxDimension > 0)
+            if (willResize)
             {
                 var scale = (double)options.MaxDimension / longestSide;
                 var newWidth = Math.Max(1, (int)Math.Round(width * scale));
@@ -125,6 +126,17 @@ public static partial class ImageProcessor
 
             using var image = SKImage.FromBitmap(toEncode);
             var bytes = EncodeToFitSize(image, options.MaxFileSizeBytes);
+
+            // Zdjęcie nie wymagało zmniejszenia wymiarów, a nasza rekompresja i tak wyszła
+            // większa niż oryginał (typowe dla małych plików już skompresowanych wysoko) —
+            // zamiast "pogarszać" plik, po prostu kopiujemy oryginał 1:1. Bezpieczne tylko
+            // gdy oryginał już jest JPEG-iem, bo docelowy plik zawsze ma rozszerzenie .jpg.
+            if (!willResize && IsJpegFile(sourcePath) && bytes.Length >= new FileInfo(sourcePath).Length)
+            {
+                File.Copy(sourcePath, destPath, overwrite: true);
+                return;
+            }
+
             File.WriteAllBytes(destPath, bytes);
         }
         finally
@@ -132,6 +144,9 @@ public static partial class ImageProcessor
             resized?.Dispose();
         }
     }
+
+    private static bool IsJpegFile(string path) =>
+        Path.GetExtension(path).ToLowerInvariant() is ".jpg" or ".jpeg";
 
     private const int MinAutoQuality = 20;
     private const int MaxAutoQuality = 95;

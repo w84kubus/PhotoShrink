@@ -9,25 +9,26 @@
   <br />
   🇬🇧 <strong>English</strong> · <a href="README.pl.md">🇵🇱 Czytaj po polsku</a>
   <br />
-  <a href="https://github.com/w84kubus/PhotoShrink/releases/tag/v0.1.0"><strong>⬇️ Download PhotoShrink.exe</strong></a>
+  <a href="https://github.com/w84kubus/PhotoShrink/releases/tag/v0.1.1"><strong>⬇️ Download for Windows</strong></a>
+  ·
+  <a href="https://github.com/w84kubus/PhotoShrink/releases/tag/v0.1.1"><strong>⬇️ Download for macOS</strong></a>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white" alt=".NET 10" />
   <img src="https://img.shields.io/badge/Avalonia_UI-12-9B59B6?logo=csharp&logoColor=white" alt="Avalonia UI 12" />
   <img src="https://img.shields.io/badge/SkiaSharp-image_engine-4A9EFF" alt="SkiaSharp" />
-  <img src="https://img.shields.io/badge/platform-Windows_11-0078D6?logo=windows11&logoColor=white" alt="Windows 11" />
-  <img src="https://img.shields.io/badge/built_on-macOS-000000?logo=apple&logoColor=white" alt="Built on macOS" />
-  <img src="https://img.shields.io/badge/tests-11-22C55E?logo=xunit&logoColor=white" alt="11 tests" />
+  <img src="https://img.shields.io/badge/platform-Windows_%7C_macOS-0078D6?logo=windows11&logoColor=white" alt="Windows and macOS" />
+  <img src="https://img.shields.io/badge/tests-12-22C55E?logo=xunit&logoColor=white" alt="12 tests" />
 </p>
 
 ---
 
 ## About
 
-**PhotoShrink** is a small Windows desktop app that does one thing: take photos straight from
-the camera (several MB each, way too large for an email) and turn them into copies small enough
-to attach, without touching the originals.
+**PhotoShrink** is a small desktop app (Windows and macOS) that does one thing: take photos
+straight from the camera (several MB each, way too large for an email) and turn them into
+copies small enough to attach, without touching the originals.
 
 It's built for people who are not technical — drag photos onto the window, watch a size and
 percentage next to each one, click one button, done. No "JPEG quality" slider, no folder
@@ -45,9 +46,9 @@ hunting, no config to get right first.
 - **Drag & drop** — individual photos or a whole folder, with a highlighted drop zone and a
   confirmation animation on drop
 - **Folder picker** as a fallback for anyone who'd rather click than drag
-- **Explorer context menu** — select photos in Windows Explorer, right-click, *"Pomniejsz
-  zdjęcia (PhotoShrink)"* launches the app with them already loaded (toggle on/off from
-  Settings — writes to `HKEY_CURRENT_USER`, no admin rights needed)
+- **Explorer context menu** (Windows only) — select photos in Windows Explorer, right-click,
+  *"Pomniejsz zdjęcia (PhotoShrink)"* launches the app with them already loaded (toggle on/off
+  from Settings — writes to `HKEY_CURRENT_USER`, no admin rights needed)
 - Unsupported files (anything that isn't a photo) are skipped with a clear message instead of
   silently vanishing
 - **HEIC/HEIF** (iPhone photos) decoded via Windows' own codecs (GDI+/WIC) whenever SkiaSharp
@@ -57,6 +58,8 @@ hunting, no config to get right first.
 - Resize to a maximum dimension (default 1920 px) — never upscales a smaller photo
 - **Target file size instead of a quality number** — binary search finds the highest JPEG
   quality that still fits the limit, so nobody has to know what "quality 80" means
+- Never makes an already-small JPEG *bigger* — if a photo already fits the size budget without
+  resizing, it's copied through untouched instead of getting re-compressed upward
 - Originals are only ever read, never modified or deleted
 - Copies are written next to the originals, in a `do_wyslania_mailem` subfolder
 
@@ -65,12 +68,13 @@ hunting, no config to get right first.
 - A summary banner with the total saved (*"Saved 18.3 MB (81%)"*) once a batch finishes
 - Remove a single photo from the list before processing, or clear the whole list
 - **Drag a finished photo straight out of the list** onto any other window — an open Outlook
-  compose window, Teams, anywhere that accepts a dropped file — to attach it directly
-- One click opens the destination folder in Explorer
+  compose window, Teams, Mail.app, anywhere that accepts a dropped file — to attach it directly
+- One click opens the destination folder (Explorer on Windows, Finder on macOS)
 
 ### Housekeeping
 - Settings (max dimension, max file size, output folder name) are remembered between launches
-- A single ~100 MB self-contained `.exe` — nothing to install on the machine that runs it
+- A single self-contained package for each platform — nothing to install on the machine that
+  runs it (a `.exe` on Windows, a proper `.app` in a `.dmg` on macOS)
 
 ## Tech stack
 
@@ -80,8 +84,8 @@ hunting, no config to get right first.
 | MVVM | [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) — source-generated `[ObservableProperty]` / `[RelayCommand]` |
 | Image engine | [SkiaSharp](https://github.com/mono/SkiaSharp) (MIT) — resize + JPEG encode |
 | HEIC fallback | `System.Drawing.Common`, Windows-only, used only when SkiaSharp can't decode a file |
-| Runtime | .NET 10, self-contained single-file `win-x64` publish |
-| Tests | xUnit, 11 tests covering the resize/compress/thumbnail logic |
+| Runtime | .NET 10, self-contained publish — single-file `win-x64` .exe, `.app` bundle for `osx-arm64` |
+| Tests | xUnit, 12 tests covering the resize/compress/thumbnail logic |
 
 ## Why SkiaSharp, not ImageSharp
 
@@ -98,6 +102,7 @@ src/PhotoShrink.Core/   — resize, compression, file discovery, thumbnails — 
 src/PhotoShrink.App/    — Avalonia UI, MVVM, Explorer integration, drag&drop
 tests/PhotoShrink.Core.Tests/
 publish-windows.sh      — builds the self-contained Windows .exe
+publish-macos.sh        — builds PhotoShrink.app + a .dmg (Apple Silicon by default)
 ```
 
 `PhotoShrink.Core` has no reference to Avalonia or anything Windows-specific, so the actual
@@ -105,8 +110,9 @@ resize/compress logic is fully unit-testable and runs the same way on every plat
 
 ## Building
 
-PhotoShrink targets Windows, but every part of it — including the final `.exe` — can be built
-from macOS or Linux, no Windows machine or CI required:
+Avalonia is cross-platform, so despite targeting Windows and macOS as end-user platforms, every
+part of PhotoShrink — including both final packages — can be built from macOS or Linux, no
+Windows machine or CI required:
 
 ```bash
 dotnet build              # whole solution
@@ -114,13 +120,18 @@ dotnet test                # PhotoShrink.Core unit tests
 dotnet run --project src/PhotoShrink.App   # run the GUI locally (works on macOS too — Avalonia)
 
 ./publish-windows.sh       # self-contained win-x64 PhotoShrink.exe in dist/win-x64/
+./publish-macos.sh         # PhotoShrink.app + PhotoShrink.dmg in dist/osx-arm64/ (set RID=osx-x64 for Intel Macs)
 ```
 
-`dotnet publish -r win-x64 --self-contained` is what makes the cross-compilation possible —
-the resulting `.exe` needs nothing installed on the Windows machine that runs it.
+`dotnet publish -r win-x64 --self-contained` is what makes the Windows cross-compilation
+possible — the resulting `.exe` needs nothing installed on the machine that runs it. The macOS
+`.app` is just the same self-contained publish output wrapped in a proper bundle, with an
+`.icns` icon built from the same source artwork as the Windows `.ico`.
 
 ## Status
 
-Core resize/compress/drag&drop flow is built and verified end-to-end on real Windows 11. HEIC
-support, drag-out-to-attach and the Explorer context menu are newer and still pending a real
-Windows test before they're fully trusted.
+Core resize/compress/drag&drop flow is verified end-to-end on real Windows 11 and on macOS
+(Apple Silicon, built and tested on this same machine via the app bundle above — including the
+"never grow an already-small JPEG" fix). HEIC support, drag-out-to-attach and the Windows
+Explorer context menu are newer, Windows-specific, and still pending a real Windows test before
+they're fully trusted.
