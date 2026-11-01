@@ -33,15 +33,17 @@ personal tool.
 **Windows:** run `PhotoShrink.exe`. SmartScreen will likely say *"Windows protected your PC"* —
 click **"More info"** → **"Run anyway"**.
 
-**macOS:** open `PhotoShrink.dmg`, drag `PhotoShrink.app` into `Applications`. You'll likely see
-*"Apple could not verify ... is free of malware"* with no inline way past it. Easiest fix: the
-`.dmg` also includes **`Odblokuj i uruchom PhotoShrink.command`** — double-click it and it opens
-the app for you. Prefer doing it yourself? Open Terminal and run:
+**macOS:** open `PhotoShrink.dmg`, drag `PhotoShrink.app` into `Applications`. You'll see *"Apple
+could not verify ... is free of malware"* with no inline way past it — and double-clicking any
+helper script hits the exact same wall, since recent macOS blocks every downloaded, unsigned
+file the same way regardless of what it is. The one thing that **does** work: open Terminal and
+run
 ```bash
 xattr -cr /Applications/PhotoShrink.app
 ```
-(or via **System Settings → Privacy & Security**, scroll down to the blocked-app notice →
-**"Open Anyway"**).
+then launch PhotoShrink normally. No Terminal? **System Settings → Privacy & Security**, scroll
+down to the blocked-app notice → **"Open Anyway"** (try opening the app first so the notice
+shows up).
 
 ## About
 

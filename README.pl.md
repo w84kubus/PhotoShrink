@@ -33,15 +33,17 @@ Microsoftowi/Apple za certyfikat do małego, osobistego narzędzia.
 **Windows:** uruchom `PhotoShrink.exe`. SmartScreen prawdopodobnie pokaże *"Windows ochronił
 Twój komputer"* — kliknij **"Więcej informacji"** → **"Uruchom mimo to"**.
 
-**macOS:** otwórz `PhotoShrink.dmg`, przeciągnij `PhotoShrink.app` do `Applications`.
-Zobaczysz prawdopodobnie *"Apple nie może zweryfikować..."* bez przycisku pozwalającego to od
-razu ominąć. Najłatwiej: w `.dmg` jest też plik **`Odblokuj i uruchom PhotoShrink.command`** —
-dwuklik i aplikacja sama się otworzy. Wolisz zrobić to sam? Otwórz Terminal i wklej:
+**macOS:** otwórz `PhotoShrink.dmg`, przeciągnij `PhotoShrink.app` do `Applications`. Zobaczysz
+*"Apple nie może zweryfikować..."* bez przycisku pozwalającego to od razu ominąć — a dwuklik na
+jakikolwiek pomocniczy skrypt trafia w dokładnie tę samą ścianę, bo nowszy macOS blokuje tak
+samo każdy pobrany, niepodpisany plik, niezależnie co to jest. Jedyne, co naprawdę działa:
+otwórz Terminal i wklej
 ```bash
 xattr -cr /Applications/PhotoShrink.app
 ```
-(albo przez **Ustawienia systemowe → Prywatność i bezpieczeństwo**, przewiń w dół do komunikatu
-o zablokowanej aplikacji → **"Otwórz mimo to"**).
+a potem odpal PhotoShrink normalnie. Bez Terminala? **Ustawienia systemowe → Prywatność i
+bezpieczeństwo**, przewiń w dół do komunikatu o zablokowanej aplikacji → **"Otwórz mimo to"**
+(spróbuj najpierw odpalić aplikację, żeby ten komunikat się tam pojawił).
 
 ## O aplikacji
 
