@@ -1,0 +1,12 @@
+<Project>
+  <!--
+    Wspólne ustawienia MSBuild dla wszystkich projektów w solution
+    (PhotoShrink.Core, PhotoShrink.App, PhotoShrink.Core.Tests).
+    Każdy projekt może nadpisać te wartości lokalnie, jeśli potrzebuje.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+</Project>

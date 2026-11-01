@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PhotoShrink.App/PhotoShrink.App.csproj" />
+    <Project Path="src/PhotoShrink.Core/PhotoShrink.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PhotoShrink.Core.Tests/PhotoShrink.Core.Tests.csproj" />
+  </Folder>
+</Solution>

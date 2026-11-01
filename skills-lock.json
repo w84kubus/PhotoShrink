@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "code-testing-agent": {
+      "source": "dotnet/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/dotnet-test/skills/code-testing-agent/SKILL.md",
+      "computedHash": "fa4afc77714d3cab7dd76feb68944010563018643d654be8e112b167a0b1ad7f"
+    },
+    "directory-build-organization": {
+      "source": "dotnet/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/dotnet-msbuild/skills/directory-build-organization/SKILL.md",
+      "computedHash": "02aad8c7a913c71382f6db79d50e98108821ed40e7fbf26a5f47fe24b5219cdd"
+    },
+    "dotnet-aot-compat": {
+      "source": "dotnet/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/dotnet-upgrade/skills/dotnet-aot-compat/SKILL.md",
+      "computedHash": "71e462a0382d3d07a858d466e8465a2faa62dc2bf7526e7b9928db13b9961602"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "b146008599c31057cef1c145774cea5d5afb30e8f43fa802e47a4b461419aaaf"
+    },
+    "msbuild-modernization": {
+      "source": "dotnet/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/dotnet-msbuild/skills/msbuild-modernization/SKILL.md",
+      "computedHash": "a9cb711b0bb69b40c5948ffc26f4b645b214093550f1e92dc7fe4d114ffe3ef8"
+    }
+  }
+}

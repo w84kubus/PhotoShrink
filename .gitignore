@@ -1,0 +1,16 @@
+# Build output
+bin/
+obj/
+dist/
+
+# IDE / tooling
+.vs/
+.vscode/
+*.user
+*.suo
+
+# OS
+.DS_Store
+
+# dotnet-install.sh artifacts (if ever re-run inside this folder)
+dotnet-install.sh

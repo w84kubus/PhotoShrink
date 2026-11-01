@@ -1,0 +1,67 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PhotoShrink.App.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="560" d:DesignHeight="560"
+        x:Class="PhotoShrink.App.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Width="560" Height="580" MinWidth="480" MinHeight="520"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="PhotoShrink — pomniejszanie zdjęć do maila">
+
+    <Design.DataContext>
+        <!-- Tylko dla podglądu w IDE; prawdziwy DataContext ustawiany jest w App.axaml.cs -->
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid Margin="20" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*">
+
+        <TextBlock Grid.Row="0" Text="Folder ze zdjęciami" FontWeight="Bold" Margin="0,0,0,6"/>
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
+            <TextBox Grid.Column="0" Text="{Binding SourceFolder}" IsReadOnly="True"
+                     PlaceholderText="Nie wybrano folderu..." Margin="0,0,8,0"/>
+            <Button Grid.Column="1" Content="Wybierz..." Click="OnPickFolderClick" IsEnabled="{Binding !IsBusy}"/>
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnDefinitions="*,*" Margin="0,0,0,16">
+            <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                <TextBlock Text="Maks. wymiar (px)" Margin="0,0,0,6"/>
+                <NumericUpDown Value="{Binding MaxDimension}" Minimum="100" Maximum="10000"
+                               Increment="10" FormatString="0" IsEnabled="{Binding !IsBusy}"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1">
+                <TextBlock Text="Podfolder wyjściowy" Margin="0,0,0,6"/>
+                <TextBox Text="{Binding OutputFolderName}" IsEnabled="{Binding !IsBusy}"/>
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="3" Margin="0,0,0,16">
+            <TextBlock Text="{Binding JpegQuality, StringFormat='Jakość JPEG: {0}'}" Margin="0,0,0,6"/>
+            <Slider Minimum="1" Maximum="100" Value="{Binding JpegQuality}" IsEnabled="{Binding !IsBusy}"/>
+        </StackPanel>
+
+        <Button Grid.Row="4" Content="Pomniejsz zdjęcia" Command="{Binding StartCommand}"
+                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                Padding="0,10" Margin="0,0,0,16"/>
+
+        <ProgressBar Grid.Row="5" Minimum="0" Maximum="100" Value="{Binding ProgressPercent}"
+                     Height="8" Margin="0,0,0,10"/>
+
+        <TextBlock Grid.Row="6" Text="{Binding StatusText}" Margin="0,0,0,10" TextWrapping="Wrap"/>
+
+        <Border Grid.Row="7" BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="4">
+            <ScrollViewer>
+                <ItemsControl ItemsSource="{Binding LogLines}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" FontFamily="Consolas,Menlo,monospace" FontSize="12"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+    </Grid>
+</Window>
