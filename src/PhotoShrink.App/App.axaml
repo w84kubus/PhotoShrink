@@ -2,8 +2,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="PhotoShrink.App.App"
              xmlns:local="using:PhotoShrink.App"
-             RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+             RequestedThemeVariant="Light">
+             <!-- Wymuszone jasne, bo to świadomy design aplikacji (karty, cienie, niebieski akcent) —
+                  ma wyglądać tak samo na każdym komputerze, niezależnie od trybu ciemny/jasny w systemie. -->
 
     <Application.DataTemplates>
         <local:ViewLocator />

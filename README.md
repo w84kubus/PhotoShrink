@@ -32,7 +32,8 @@ copies small enough to attach, without touching the originals.
 
 It's built for people who are not technical — drag photos onto the window, watch a size and
 percentage next to each one, click one button, done. No "JPEG quality" slider, no folder
-hunting, no config to get right first.
+hunting, no config to get right first. Light, card-based interface with a consistent look on
+both Windows and macOS, regardless of the system's own light/dark setting.
 
 1. 🖼️ **Drag in photos** (or a whole folder) — or pick them the normal way
 2. 📏 **Set a target file size** (default 1 MB) — PhotoShrink finds the best JPEG quality for it

@@ -32,7 +32,9 @@ na tyle małe, żeby dało się je załączyć — bez dotykania oryginałów.
 
 Zrobiona z myślą o osobach nietechnicznych — przeciągasz zdjęcia na okno, widzisz rozmiar i
 procent oszczędności przy każdym z nich, klikasz jeden przycisk, gotowe. Żadnego suwaka
-"jakość JPEG", szukania folderu ani konfiguracji do ogarnięcia na starcie.
+"jakość JPEG", szukania folderu ani konfiguracji do ogarnięcia na starcie. Jasny interfejs
+oparty o karty, wyglądający tak samo na Windows i macOS, niezależnie od trybu ciemny/jasny
+w systemie.
 
 1. 🖼️ **Przeciągnij zdjęcia** (albo cały folder) — albo wybierz je zwyczajnie, klikając
 2. 📏 **Ustaw docelowy rozmiar pliku** (domyślnie 1 MB) — PhotoShrink sam dobiera najlepszą
