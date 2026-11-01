@@ -24,6 +24,25 @@
 
 ---
 
+## Instalacja
+
+Żadna z paczek nie jest podpisana płatnym certyfikatem producenta, więc system przy pierwszym
+uruchomieniu to zgłosi — to normalne, aplikacja jest bezpieczna, po prostu nikt nie zapłacił
+Microsoftowi/Apple za certyfikat do małego, osobistego narzędzia.
+
+**Windows:** uruchom `PhotoShrink.exe`. SmartScreen prawdopodobnie pokaże *"Windows ochronił
+Twój komputer"* — kliknij **"Więcej informacji"** → **"Uruchom mimo to"**.
+
+**macOS:** otwórz `PhotoShrink.dmg`, przeciągnij `PhotoShrink.app` do `Applications`.
+Zobaczysz prawdopodobnie *"Apple nie może zweryfikować..."* bez przycisku pozwalającego to od
+razu ominąć. Najłatwiej: w `.dmg` jest też plik **`Odblokuj i uruchom PhotoShrink.command`** —
+dwuklik i aplikacja sama się otworzy. Wolisz zrobić to sam? Otwórz Terminal i wklej:
+```bash
+xattr -cr /Applications/PhotoShrink.app
+```
+(albo przez **Ustawienia systemowe → Prywatność i bezpieczeństwo**, przewiń w dół do komunikatu
+o zablokowanej aplikacji → **"Otwórz mimo to"**).
+
 ## O aplikacji
 
 **PhotoShrink** to mała desktopowa aplikacja (Windows i macOS), która robi jedną rzecz: bierze

@@ -70,11 +70,64 @@ PLIST
 echo "==> podpis ad-hoc (żeby Gatekeeper nie uznał pliku za 'uszkodzony')"
 codesign --force --deep -s - "$APP_DIR" 2>&1 | tail -5 || true
 
+echo "==> pomocnik na pierwsze uruchomienie (Gatekeeper nie ma certyfikatu Apple Developer)"
+# macOS traktuje pobrany, niepodpisany komercyjnie plik jako "nie można zweryfikować" —
+# to się nie da obejść za darmo (wymaga płatnego konta Apple Developer + notaryzacji).
+# Dokładamy więc skrypt, który jednym kliknięciem zdejmuje flagę kwarantanny i odpala appkę,
+# plus czytelny plik tekstowy na wypadek, gdyby ktoś wolał zrobić to ręcznie.
+cat > "$OUT_DIR/Odblokuj i uruchom PhotoShrink.command" << 'SCRIPT'
+#!/bin/bash
+# Usuwa flagę "pobrane z internetu" (quarantine) i odpala PhotoShrink.
+# Bezpieczne — to tylko kasuje metadane macOS, nic nie zmienia w samej aplikacji.
+cd "$(dirname "$0")"
+if [ -d "./PhotoShrink.app" ]; then
+  APP="./PhotoShrink.app"
+elif [ -d "/Applications/PhotoShrink.app" ]; then
+  APP="/Applications/PhotoShrink.app"
+else
+  echo "Nie znaleziono PhotoShrink.app obok tego pliku ani w /Applications."
+  echo "Przeciągnij najpierw PhotoShrink.app do folderu Applications."
+  read -p "Wciśnij Enter, żeby zamknąć to okno..."
+  exit 1
+fi
+xattr -cr "$APP" 2>/dev/null
+open "$APP"
+SCRIPT
+chmod +x "$OUT_DIR/Odblokuj i uruchom PhotoShrink.command"
+
+cat > "$OUT_DIR/Przeczytaj przed uruchomieniem.txt" << 'TXT'
+PhotoShrink — pierwsze uruchomienie na macOS
+=============================================
+
+macOS prawdopodobnie pokaże komunikat "Apple nie może zweryfikować, czy
+PhotoShrink nie zawiera szkodliwego oprogramowania" — to normalne dla
+aplikacji spoza App Store bez płatnego certyfikatu Apple Developer.
+Aplikacja jest bezpieczna, po prostu nikt za nią nie zapłacił Apple.
+
+NAJŁATWIEJ:
+  1. Przeciągnij PhotoShrink.app do folderu Applications.
+  2. Odpal dwuklikiem "Odblokuj i uruchom PhotoShrink.command" (ten plik,
+     obok tego tekstu) — zrobi resztę za Ciebie.
+
+RĘCZNIE, przez Terminal:
+  1. Otwórz Terminal (Spotlight: cmd+Spacja, wpisz "Terminal").
+  2. Wklej i wciśnij Enter:
+       xattr -cr /Applications/PhotoShrink.app
+  3. Odpal PhotoShrink normalnie.
+
+RĘCZNIE, bez Terminala:
+  1. Ustawienia systemowe -> Prywatność i bezpieczeństwo.
+  2. Przewiń w dół, znajdź komunikat o PhotoShrink, kliknij "Otwórz mimo to".
+  3. Potwierdź hasłem / Touch ID, spróbuj odpalić ponownie.
+TXT
+
 echo "==> pakowanie do .dmg (do instalacji: przeciągnij do Applications)"
 DMG_STAGE="$OUT_DIR/dmg-stage"
 rm -rf "$DMG_STAGE"
 mkdir -p "$DMG_STAGE"
 cp -R "$APP_DIR" "$DMG_STAGE/"
+cp "$OUT_DIR/Odblokuj i uruchom PhotoShrink.command" "$DMG_STAGE/"
+cp "$OUT_DIR/Przeczytaj przed uruchomieniem.txt" "$DMG_STAGE/"
 ln -s /Applications "$DMG_STAGE/Applications"
 
 DMG_PATH="$OUT_DIR/PhotoShrink.dmg"
