@@ -125,13 +125,19 @@ public static partial class ImageProcessor
             }
 
             using var image = SKImage.FromBitmap(toEncode);
-            var bytes = EncodeToFitSize(image, options.MaxFileSizeBytes);
 
-            // Zdjęcie nie wymagało zmniejszenia wymiarów, a nasza rekompresja i tak wyszła
-            // większa niż oryginał (typowe dla małych plików już skompresowanych wysoko) —
-            // zamiast "pogarszać" plik, po prostu kopiujemy oryginał 1:1. Bezpieczne tylko
-            // gdy oryginał już jest JPEG-iem, bo docelowy plik zawsze ma rozszerzenie .jpg.
-            if (!willResize && IsJpegFile(sourcePath) && bytes.Length >= new FileInfo(sourcePath).Length)
+            // Celujemy nie tylko w limit z ustawień, ale też w rozmiar oryginału — inaczej
+            // zdjęcie w formacie dużo bardziej wydajnym niż JPEG (typowo HEIC z iPhone'a)
+            // mogłoby po "pomniejszeniu" wyjść WIĘKSZE niż było, jeśli tylko mieściłoby się
+            // w hojnym limicie z ustawień. "Pomniejszacz" nie powinien nigdy powiększać.
+            var originalFileSize = new FileInfo(sourcePath).Length;
+            var effectiveMaxBytes = EffectiveMaxBytes(options.MaxFileSizeBytes, originalFileSize);
+            var bytes = EncodeToFitSize(image, effectiveMaxBytes);
+
+            // Dodatkowa siatka bezpieczeństwa dla najczęstszego przypadku (JPEG -> JPEG, bez
+            // zmiany wymiarów): jeśli nawet przy najniższej akceptowalnej jakości wynik wciąż
+            // wyszedłby większy niż oryginał, po prostu kopiujemy oryginał 1:1 zamiast go psuć.
+            if (!willResize && IsJpegFile(sourcePath) && bytes.Length >= originalFileSize)
             {
                 File.Copy(sourcePath, destPath, overwrite: true);
                 return;
@@ -147,6 +153,14 @@ public static partial class ImageProcessor
 
     private static bool IsJpegFile(string path) =>
         Path.GetExtension(path).ToLowerInvariant() is ".jpg" or ".jpeg";
+
+    /// <summary>
+    /// Nigdy nie celujemy wyżej niż w rozmiar oryginału — limit z ustawień to tylko górny
+    /// sufit, nie cel sam w sobie. Współdzielone przez ścieżkę SkiaSharp i awaryjną ścieżkę
+    /// Windows (HEIC), żeby obie zachowywały się tak samo.
+    /// </summary>
+    private static long EffectiveMaxBytes(long configuredLimit, long originalFileSize) =>
+        originalFileSize > 0 ? Math.Min(configuredLimit, originalFileSize) : configuredLimit;
 
     private const int MinAutoQuality = 20;
     private const int MaxAutoQuality = 95;

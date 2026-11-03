@@ -68,6 +68,7 @@ cat > "$APP_DIR/Contents/Info.plist" << 'PLIST'
 PLIST
 
 echo "==> podpis ad-hoc (żeby Gatekeeper nie uznał pliku za 'uszkodzony')"
+find "$APP_DIR" -name ".DS_Store" -delete 2>/dev/null || true
 codesign --force --deep -s - "$APP_DIR" 2>&1 | tail -5 || true
 
 echo "==> instrukcja na pierwsze uruchomienie (Gatekeeper nie ma certyfikatu Apple Developer)"

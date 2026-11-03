@@ -41,7 +41,13 @@ public static partial class ImageProcessor
                     toEncode = resized;
                 }
 
-                var bytes = EncodeJpegToFitSize(toEncode, options.MaxFileSizeBytes);
+                // Ten sam cel co w ścieżce SkiaSharp: nigdy nie wyjdź większy niż oryginał,
+                // nawet jeśli hojny limit z ustawień by na to pozwolił. Istotne akurat tutaj,
+                // bo to ścieżka dla HEIC — formatu zwykle dużo bardziej wydajnego niż JPEG,
+                // więc "pomniejszony" JPEG mógłby łatwo wyjść cięższy niż oryginał.
+                var originalFileSize = new FileInfo(sourcePath).Length;
+                var effectiveMaxBytes = EffectiveMaxBytes(options.MaxFileSizeBytes, originalFileSize);
+                var bytes = EncodeJpegToFitSize(toEncode, effectiveMaxBytes);
                 File.WriteAllBytes(destPath, bytes);
                 return true;
             }

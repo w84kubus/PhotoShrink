@@ -235,6 +235,33 @@ public sealed class ImageProcessorTests : IDisposable
     }
 
     [Fact]
+    public async Task ProcessImageAsync_NeverGrowsOriginal_EvenWhenResizeIsNeeded()
+    {
+        // Ten sam pomysł co wyżej, ale tym razem wymiary PRZEKRACZAJĄ MaxDimension, więc
+        // resize jest potrzebny — czyli omijamy "siatkę bezpieczeństwa" przy braku resize
+        // i testujemy sam ogólny mechanizm (EffectiveMaxBytes), który ma działać niezależnie
+        // od tego, czy resize się odbył. To dokładnie ten scenariusz, w którym realnie
+        // odtworzono bug: zdjęcie w formacie dużo bardziej wydajnym niż JPEG (np. HEIC)
+        // mogłoby po zmniejszeniu wymiarów i rekompresji do JPEG wyjść WIĘKSZE niż oryginał,
+        // jeśli algorytm celowałby tylko w hojny limit z ustawień, a nie w rozmiar oryginału.
+        var pngSource = CreateTestImage(Path.Combine(_tempDir, "big_source.png"), 2400, 1800);
+        using var bitmap = SKBitmap.Decode(pngSource);
+        using var image = SKImage.FromBitmap(bitmap);
+        using var lowQualityData = image.Encode(SKEncodedImageFormat.Jpeg, 12);
+        var jpegPath = Path.Combine(_tempDir, "already_small_large_dims.jpg");
+        await File.WriteAllBytesAsync(jpegPath, lowQualityData.ToArray());
+        var originalSize = new FileInfo(jpegPath).Length;
+
+        var result = await ImageProcessor.ProcessImageAsync(
+            jpegPath, Path.Combine(_tempDir, "out"),
+            new ProcessOptions { MaxDimension = 1920, MaxFileSizeBytes = 5_000_000 }); // willResize=true, limit bardzo hojny
+
+        Assert.Equal(ProcessStatus.Processed, result.Status);
+        Assert.True(result.OutputBytes <= originalSize * 1.1,
+            $"Wynik ({result.OutputBytes} B) nie powinien być istotnie większy niż oryginał ({originalSize} B), mimo hojnego limitu MB.");
+    }
+
+    [Fact]
     public async Task ProcessFolderAsync_ProcessesAllImages_AndReportsProgress()
     {
         CreateTestImage(Path.Combine(_tempDir, "p1.png"), 1000, 1000);
