@@ -9,9 +9,9 @@
   <br />
   🇬🇧 <strong>English</strong> · <a href="README.pl.md">🇵🇱 Czytaj po polsku</a>
   <br />
-  <a href="https://github.com/w84kubus/PhotoShrink/releases/tag/v0.1.4"><strong>⬇️ Download for Windows</strong></a>
+  <a href="https://github.com/w84kubus/PhotoShrink/releases/tag/v0.1.5"><strong>⬇️ Download for Windows</strong></a>
   ·
-  <a href="https://github.com/w84kubus/PhotoShrink/releases/tag/v0.1.4"><strong>⬇️ Download for macOS</strong></a>
+  <a href="https://github.com/w84kubus/PhotoShrink/releases/tag/v0.1.5"><strong>⬇️ Download for macOS</strong></a>
 </p>
 
 <p align="center">
